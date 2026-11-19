@@ -1,0 +1,22 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos gerados em execução
+progresso_meta.txt
+progresso_seguidores.txt
+progreso_meta.txt
+progreso_seguidores.txt
+
+# Vídeos e áudio adicionados pelo usuário
+repouso.mp4
+falando.mp4
+reposo.mp4
+hablando.mp4
+musica.mp3
+
+# Ambientes virtuais e editores
+.venv/
+venv/
+.vscode/
+.idea/

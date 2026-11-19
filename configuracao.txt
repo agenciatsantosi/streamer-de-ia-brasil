@@ -1,0 +1,100 @@
+# =====================================================================
+#  CONFIGURAÇÃO DO STREAMER DE IA
+#  Escreva após o sinal de = sem aspas. As linhas com # são notas.
+#  Sempre que alterar algo, feche a janela preta e abra o iniciar novamente.
+# =====================================================================
+
+# ---- Modo ----
+# teste = você digita eventos fictícios na janela preta (não precisa estar ao vivo)
+# live  = lê os eventos reais da sua live através do TikFinity Desktop
+MODO = teste
+
+# ---- Inteligência Artificial ----
+# Cole sua chave gratuita do Gemini: https://aistudio.google.com  ->  Get API key
+GEMINI_KEY =
+# Modelos gratuitos que são usados em ordem com a mesma chave. Cada um tem seu
+# próprio limite diário: quando um acaba, passa para o próximo.
+# Verifique seus limites no AI Studio -> Rate limits -> Todos os modelos.
+GEMINI_MODELOS = gemini-3.1-flash-lite, gemini-3.5-flash-lite, gemma-4-31b-it
+
+# Backup opcional (Groq): https://console.groq.com  ->  API Keys
+GROQ_KEY =
+GROQ_MODELO = openai/gpt-oss-120b
+
+# Opcional, apenas se você tiver uma boa placa de vídeo e usar LM Studio ou Ollama.
+# LM Studio: http://localhost:1234/v1     Ollama: http://localhost:11434/v1
+LOCAL_URL =
+LOCAL_MODELO =
+
+# ---- Voz ----
+# Cole aqui as 3 linhas que o DeepSeek te passou. Vozes disponíveis (Brasil):
+# pt-BR-FranciscaNeural (mulher, Brasil)        pt-BR-AntonioNeural (homem, Brasil)
+# pt-BR-ThalitaNeural (mulher, Brasil)
+# Velocidade: -15% mais lento ... +10% mais rápido.  Tom: -10Hz mais grave ... +10Hz mais agudo.
+VOZ = pt-BR-FranciscaNeural
+VELOCIDADE = +0%
+TOM = +0Hz
+
+# ---- O que a personagem responde ----
+# Sempre agradece presentes. Isto é o opcional:
+AGRADECER_SEGUIDORES = sim
+RESPONDER_COMENTARIOS_DE_QUEM_ENVIA_PRESENTE = sim
+
+# ---- Filtros contra palavrões e trolls ----
+# Se um comentário ou uma resposta incluir alguma dessas palavras, será ignorado.
+PALAVRAS_PROIBIDAS = porra, caralho, fdp, puta, puto, vadia, arrombado, arrombada, cuzão, cuzao, bosta, merda, cu, carai, viado, viadinho, babaca, pau no cu, filho da puta, buceta, siririca, xoxota, sexo, droga
+# Palavras extras apenas para nomes de usuário (trolls com nomes ofensivos).
+PALAVRAS_PROIBIDAS_EM_NOMES = morte, mata, matar, kill, assassino, assassina, nazi, hitler, estupro, suicid, fuck, shit, bitch, porn, porno, sexy, onlyfans
+# Nomes e sobrenomes normais que contenham palavras proibidas por coincidência
+PALAVRAS_PERMITIDAS_EM_NOMES = matamoros, custódio, custodio, cunha, curado, cupido
+# Como a personagem chamará alguém com nome ofensivo
+NOME_GENERICO = amigo
+
+# ---- Animação ----
+# O visualizador verifica apenas falando.mp4 e usa apenas as partes onde a personagem se move:
+# ignora o início parado, o final parado e as pausas no meio.
+# Se colocar nao, usa os dois números abaixo (segundos a pular no início e no final).
+MARGENS_AUTOMATICAS = sim
+MARGEM_FALANDO_INICIO = 0.8
+MARGEM_FALANDO_FINAL = 0.8
+
+# ---- Textos na tela ----
+# Letreiro que explica a dinâmica. Você pode colocar várias mensagens separadas por |
+# e elas vão alternando a cada 7 segundos. Deixe vazio para não mostrar nada.
+LETREIRO = Me siga para um salve | Mande um presente e eu respondo sua próxima mensagem
+# Mostrar o que a personagem fala enquanto ela fala
+LEGENDAS = sim
+# As legendas são digitadas letra por letra no ritmo da voz
+LEGENDAS_DIGITACAO = sim
+# Enquanto fala, mostra quem está sendo respondido e o que perguntou
+PAINEL_RESPOSTA = sim
+# Cartões de aviso na tela quando alguém manda presente ou te segue
+AVISOS_NA_TELA = sim
+# Altura onde começam o letreiro e as legendas, em porcentagem da tela
+# (0 = topo, 100 = rodapé). Suba se tampar o rosto; desça se colidir com os comentários.
+POSICAO_TEXTOS = 60
+
+# ---- Metas na tela ----
+# Qual meta mostrar: moedas, seguidores, ambas ou nenhuma
+META_TIPO = ambas
+# Meta de moedas (cada presente soma o seu valor em moedas do TikTok)
+META_MOEDAS = 500
+META_MOEDAS_TITULO = Meta de moedas
+COR_META_MOEDAS = #F2A33A
+# Meta de seguidores (cada novo seguidor durante a live soma 1)
+META_SEGUIDORES = 50
+META_SEGUIDORES_TITULO = Meta de seguidores
+COR_META_SEGUIDORES = #E0507A
+# Altura das metas e avisos em porcentagem da tela (0 = topo, 100 = rodapé).
+# 14 deixa abaixo do nome da sua conta, longe dos comentários.
+POSICAO_META = 14
+
+# ---- Música de fundo ----
+# Coloque um arquivo chamado musica.mp3 nesta pasta e ele tocará em loop.
+# Use apenas música sem direitos autorais: músicas conhecidas fazem o TikTok mutar ou cortar sua live.
+# Volume de 0 a 100. Abaixa automaticamente enquanto a personagem fala.
+MUSICA_VOLUME = 15
+
+# ---- Solução de problemas ----
+# Defina como sim para ver na janela preta tudo o que chega do TikFinity.
+DEPURAR = nao
