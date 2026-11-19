@@ -11,6 +11,7 @@ import base64
 import json
 import random
 import re
+import socket
 import sys
 import time
 import unicodedata
@@ -34,6 +35,17 @@ CARPETA = Path(__file__).resolve().parent
 PUERTO = 8765
 TIKFINITY_URL = "ws://127.0.0.1:21213/"
 ARCHIVOS_PERMITIDOS = {".html", ".mp4", ".webm", ".mp3", ".wav", ".png", ".jpg", ".jpeg", ".webp"}
+
+
+def obter_ip_local():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        return ip
+    except Exception:
+        return "127.0.0.1"
 
 
 # ======================================================================
@@ -366,7 +378,7 @@ def unir_nombres(nombres, maximo=4):
 
 
 # ======================================================================
-#  Eventos pendentes
+#  Eventos pendentes e Histórico
 # ======================================================================
 regalos_pendientes = []
 comentarios_pendientes = []
@@ -375,6 +387,7 @@ pases = {}
 ya_siguieron = set()
 ultimas_respuestas = []
 metas_por_celebrar = []
+historico_eventos = []
 
 for _meta in METAS.values():
     try:
@@ -441,6 +454,11 @@ def registrar_regalo(uid, nombre, regalo, cantidad, diamantes):
     if RESPONDER_COMENTARIOS:
         pases[uid] = min(pases.get(uid, 0) + 1, 3)
     log(f"Presente: {nombre} enviou {cantidad} x {regalo}")
+    historico_eventos.insert(0, {
+        "hora": hora(), "tipo": "presente", "nome": nombre,
+        "detalhe": f"{cantidad}× {regalo}", "valor": diamantes * cantidad
+    })
+    del historico_eventos[50:]
     if AVISOS_EN_PANTALLA:
         enviar_a_visores({"tipo": "aviso", "icono": "🎁", "texto": f"{nombre} enviou {cantidad} × {regalo}"})
     sumar_a_meta("monedas", diamantes * cantidad)
@@ -453,6 +471,10 @@ def registrar_follow(uid, nombre):
     ya_siguieron.add(uid)
     follows_pendientes.append({"uid": uid, "nombre": nombre})
     log(f"Novo seguidor: {nombre}")
+    historico_eventos.insert(0, {
+        "hora": hora(), "tipo": "follow", "nome": nombre, "detalhe": "Novo seguidor"
+    })
+    del historico_eventos[50:]
     if AVISOS_EN_PANTALLA:
         enviar_a_visores({"tipo": "aviso", "icono": "⭐", "texto": f"{nombre} começou a seguir"})
     sumar_a_meta("seguidores", 1)
@@ -468,6 +490,10 @@ def registrar_comentario(uid, nombre, texto):
     nombre = nombre_seguro(nombre)
     comentarios_pendientes.append({"uid": uid, "nombre": nombre, "texto": texto[:200], "hora": time.time()})
     log(f"Comentário de {nombre} (enviou presente): {texto[:80]}")
+    historico_eventos.insert(0, {
+        "hora": hora(), "tipo": "comentario", "nome": nombre, "detalhe": texto[:120]
+    })
+    del historico_eventos[50:]
 
 
 def tomar_lote():
@@ -620,7 +646,7 @@ def contexto_de(lote):
         nombres = unir_nombres([r["nombre"] for r in lote["regalos"]])
         detalle = (f"{lote['regalos'][0]['cantidad']} × {lote['regalos'][0]['regalo']}"
                    if len(lote["regalos"]) == 1 else "Pelos presentes")
-        return {"titulo": f"Agradecendo a {nombres}", "detalle": detalle}
+        return {"titulo": f"Agradecendo a {nombres}", "detalle": detalhe}
     if lote["follows"]:
         nombres = unir_nombres([f["nombre"] for f in lote["follows"]])
         return {"titulo": f"Boas-vindas a {nombres}", "detalle": "Obrigado por seguir"}
@@ -772,6 +798,127 @@ async def ws_visor(request):
     return ws
 
 
+# ======================================================================
+#  Rotas do Painel de Controle e API
+# ======================================================================
+async def rota_painel(request):
+    ruta = (CARPETA / "painel.html").resolve()
+    if not ruta.is_file():
+        raise web.HTTPNotFound()
+    return web.FileResponse(ruta, headers={"Cache-Control": "no-store"})
+
+
+async def api_estado(request):
+    metas_dict = {}
+    for k, m in METAS.items():
+        chave_nome = "moedas" if k == "monedas" else k
+        metas_dict[chave_nome] = {
+            "progreso": m["progreso"],
+            "objetivo": m["objetivo"],
+            "titulo": m["titulo"],
+            "color": m["color"],
+            "unidad": m["unidad"]
+        }
+    return web.json_response({
+        "modo": MODO,
+        "voz": VOZ,
+        "velocidade": VELOCIDAD,
+        "tono": TONO,
+        "musica_volume": MUSICA_VOLUMEN,
+        "visores_conectados": len(clientes_visor),
+        "fila": {
+            "regalos": len(regalos_pendientes),
+            "comentarios": len(comentarios_pendientes),
+            "follows": len(follows_pendientes)
+        },
+        "metas": metas_dict,
+        "historico": historico_eventos,
+        "ultimas_falas": ultimas_respuestas[-5:]
+    })
+
+
+async def api_falar(request):
+    try:
+        dados = await request.json()
+        texto = str(dados.get("texto", "")).strip()
+        if not texto:
+            return web.json_response({"ok": False, "erro": "Texto vazio"}, status=400)
+        asyncio.create_task(hablar(texto))
+        log(f"Fala forçada pelo Painel: {texto}")
+        return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"ok": False, "erro": str(e)}, status=500)
+
+
+async def api_meta(request):
+    try:
+        dados = await request.json()
+        clave = dados.get("clave")
+        if clave == "moedas":
+            clave = "monedas"
+        if clave not in METAS:
+            return web.json_response({"ok": False, "erro": "Meta não encontrada"}, status=404)
+        if "progreso" in dados:
+            valor = max(0, int(dados["progreso"]))
+            poner_meta(clave, valor)
+        if "objetivo" in dados and int(dados["objetivo"]) > 0:
+            METAS[clave]["objetivo"] = int(dados["objetivo"])
+            guardar_meta(clave)
+            enviar_a_visores(datos_meta(clave))
+        return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"ok": False, "erro": str(e)}, status=500)
+
+
+async def api_config(request):
+    global MUSICA_VOLUMEN, VOZ, VELOCIDAD, TONO
+    try:
+        dados = await request.json()
+        if "musica_volume" in dados:
+            MUSICA_VOLUMEN = max(0, min(100, int(dados["musica_volume"])))
+            enviar_a_visores({"tipo": "volumen_musica", "volumen": MUSICA_VOLUMEN})
+        if "voz" in dados and dados["voz"]:
+            VOZ = str(dados["voz"]).strip()
+        if "velocidade" in dados and re.fullmatch(r"[+-]\d+%", str(dados["velocidade"]).strip()):
+            VELOCIDAD = str(dados["velocidade"]).strip()
+        if "tono" in dados and re.fullmatch(r"[+-]\d+Hz", str(dados["tono"]).strip(), flags=re.I):
+            TONO = str(dados["tono"]).strip()
+        return web.json_response({
+            "ok": True,
+            "musica_volume": MUSICA_VOLUMEN,
+            "voz": VOZ,
+            "velocidade": VELOCIDAD,
+            "tono": TONO
+        })
+    except Exception as e:
+        return web.json_response({"ok": False, "erro": str(e)}, status=500)
+
+
+async def api_simular(request):
+    try:
+        dados = await request.json()
+        tipo = dados.get("tipo")
+        if tipo in ("regalo", "presente"):
+            nombre = str(dados.get("nombre") or "Apoiador")
+            regalo = str(dados.get("regalo") or "Rosa")
+            cantidad = int(dados.get("cantidad") or 1)
+            diamantes = int(dados.get("diamantes") or (500 if regalo.lower() in REGALOS_GRANDES_PRUEBA else 1))
+            registrar_regalo(nombre.lower(), nombre, regalo, cantidad, diamantes)
+        elif tipo in ("follow", "seguidor"):
+            nombre = str(dados.get("nombre") or "NovoSeguidor")
+            registrar_follow(nombre.lower(), nombre)
+        elif tipo == "comentario":
+            nombre = str(dados.get("nombre") or "Apoiador")
+            texto = str(dados.get("texto") or "Adorei a live! Me manda um salve?")
+            pases[nombre.lower()] = max(pases.get(nombre.lower(), 0), 1)
+            registrar_comentario(nombre.lower(), nombre, texto)
+        else:
+            return web.json_response({"ok": False, "erro": "Tipo desconhecido"}, status=400)
+        return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"ok": False, "erro": str(e)}, status=500)
+
+
 async def archivo(request):
     nombre = request.match_info.get("archivo") or "visor.html"
     ruta = (CARPETA / nombre).resolve()
@@ -857,7 +1004,7 @@ MODO LIVE: os eventos chegam automaticamente do TikFinity. Nesta janela você ta
     if not instrucciones_mostradas:
         instrucciones_mostradas = True
         print("""
-COMANDOS: digite e pressione Enter.
+COMANDOS: digite e pressione Enter (ou use o Painel Web em http://localhost:8765/painel).
   r Ana Rosa 5         Ana envia 5 rosas
   r Luis Leão          Luis envia um presente grande
   f Pedro              Pedro começa a seguir você
@@ -943,26 +1090,38 @@ async def principal():
 
     app = web.Application()
     app.router.add_get("/ws", ws_visor)
+    app.router.add_get("/painel", rota_painel)
+    app.router.add_get("/admin", rota_painel)
+    app.router.add_get("/api/estado", api_estado)
+    app.router.add_post("/api/falar", api_falar)
+    app.router.add_post("/api/meta", api_meta)
+    app.router.add_post("/api/config", api_config)
+    app.router.add_post("/api/simular", api_simular)
     app.router.add_get("/", archivo)
     app.router.add_get("/{archivo}", archivo)
+
     runner = web.AppRunner(app)
     await runner.setup()
     try:
-        await web.TCPSite(runner, "127.0.0.1", PUERTO).start()
+        await web.TCPSite(runner, "0.0.0.0", PUERTO).start()
     except OSError:
         salir_con_error(f"A porta {PUERTO} está ocupada. O script já está aberto em outra janela?")
 
-    print("=" * 60)
+    ip_local = obter_ip_local()
+    print("=" * 65)
     print(" Streamer de IA pronto")
     print(f" Visualizador para testar:    http://localhost:{PUERTO}")
     print(f" Visualizador para a live:    http://127.0.0.1:{PUERTO}/visor.html?live=1")
+    print(f" Painel de Controle (Web):    http://localhost:{PUERTO}/painel")
+    if ip_local != "127.0.0.1":
+        print(f" Painel no Celular (Wi-Fi):   http://{ip_local}:{PUERTO}/painel")
     print(f" Modo:                        {MODO}")
     print(f" IA:                          {', '.join(p['nombre'] for p in PROVEEDORES) or 'nenhuma (apenas frases de backup)'}")
     print(f" Voz:                         {VOZ}")
     print(f" Agradecer seguidores:        {'sim' if AGRADECER_FOLLOWS else 'não'}")
     print(" Metas:                       " + (", ".join(f"{m['progreso']} / {m['objetivo']} {m['unidad']}"
                                                    for m in METAS.values()) or "desativadas"))
-    print("=" * 60)
+    print("=" * 65)
 
     async with aiohttp.ClientSession() as sesion:
         tareas = [asyncio.create_task(trabajador(sesion))]

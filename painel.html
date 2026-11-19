@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Painel de Controle — Streamer de IA</title>
+<style>
+  :root {
+    --bg: #0F1110;
+    --card: #181C1A;
+    --card-hover: #212623;
+    --border: rgba(243, 244, 240, 0.12);
+    --text: #F3F4F0;
+    --text-muted: #8E968F;
+    --accent: #4E9F6A;
+    --accent-hover: #5cb87b;
+    --accent-light: #A6DD7A;
+    --gold: #F2A33A;
+    --pink: #E0507A;
+    --danger: #E64545;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { background: var(--bg); color: var(--text); padding: 16px; padding-bottom: 40px; }
+  .container { max-width: 800px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+  /* Header */
+  header {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 16px 20px; flex-wrap: wrap; gap: 12px;
+  }
+  .title-group h1 { font-size: 1.25rem; font-weight: 700; color: #fff; }
+  .title-group p { font-size: 0.85rem; color: var(--text-muted); }
+  .status-badges { display: flex; gap: 8px; align-items: center; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600;
+    padding: 5px 12px; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid var(--border);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #666; }
+  .dot.online { background: var(--accent-light); box-shadow: 0 0 8px var(--accent-light); }
+  .dot.offline { background: var(--danger); }
+
+  /* Cards */
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+    padding: 18px; display: flex; flex-direction: column; gap: 14px;
+  }
+  .card-title {
+    font-size: 1rem; font-weight: 700; display: flex; justify-content: space-between;
+    align-items: center; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 10px;
+  }
+
+  /* Form Elements */
+  .input-row { display: flex; gap: 8px; }
+  input[type="text"], input[type="number"], select {
+    flex: 1; background: #0A0C0B; border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); padding: 10px 14px; font-size: 0.95rem; outline: none; transition: border 0.2s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus, select:focus {
+    border-color: var(--accent-light);
+  }
+  button {
+    background: var(--accent); color: #fff; border: none; border-radius: 10px;
+    padding: 10px 16px; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+    transition: background 0.15s, transform 0.1s; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  button:hover { background: var(--accent-hover); }
+  button:active { transform: scale(0.97); }
+  button.secondary { background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: var(--text); }
+  button.secondary:hover { background: rgba(255,255,255,0.14); }
+  button.danger { background: rgba(230, 69, 69, 0.2); color: #ff8080; border: 1px solid rgba(230, 69, 69, 0.4); }
+  button.danger:hover { background: rgba(230, 69, 69, 0.35); }
+
+  /* Quick Speech Chips */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip {
+    font-size: 0.8rem; background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 12px; cursor: pointer; color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .chip:hover { color: #fff; background: rgba(255,255,255,0.12); border-color: rgba(255,255,255,0.3); }
+
+  /* Metas Grid */
+  .metas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .meta-box {
+    background: #111413; border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .meta-header { display: flex; justify-content: space-between; font-weight: 600; font-size: 0.9rem; }
+  .meta-progress-bar {
+    height: 10px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden;
+  }
+  .meta-progress-fill { height: 100%; border-radius: 999px; transition: width 0.4s ease-out; }
+  .meta-controls { display: flex; gap: 6px; flex-wrap: wrap; }
+  .meta-controls button { padding: 6px 10px; font-size: 0.78rem; }
+
+  /* Range sliders */
+  .slider-row { display: flex; flex-direction: column; gap: 6px; }
+  .slider-label { display: flex; justify-content: space-between; font-size: 0.85rem; color: var(--text-muted); }
+  input[type="range"] {
+    -webkit-appearance: none; width: 100%; height: 6px; background: rgba(255,255,255,0.15);
+    border-radius: 999px; outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent-light); cursor: pointer; box-shadow: 0 0 6px rgba(0,0,0,0.5);
+  }
+
+  /* Queue and Stats */
+  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stat-card {
+    background: #111413; border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px; text-align: center;
+  }
+  .stat-number { font-size: 1.4rem; font-weight: 700; color: #fff; }
+  .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+  /* Feed & History */
+  .feed-list {
+    display: flex; flex-direction: column; gap: 8px; max-height: 220px;
+    overflow-y: auto; padding-right: 4px;
+  }
+  .feed-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #111413; border: 1px solid rgba(255,255,255,0.05); border-radius: 8px;
+    padding: 8px 12px; font-size: 0.85rem;
+  }
+  .feed-tag { font-weight: 600; font-size: 0.8rem; margin-right: 6px; }
+  .feed-time { font-size: 0.72rem; color: var(--text-muted); }
+
+  /* Toast Notification */
+  #toast {
+    position: fixed; bottom: 20px; right: 20px; background: rgba(20,20,20,0.95);
+    border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px;
+    font-size: 0.85rem; font-weight: 600; color: #fff; transform: translateY(100px);
+    opacity: 0; transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    z-index: 1000; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Header -->
+  <header>
+    <div class="title-group">
+      <h1>Streamer de IA — Painel</h1>
+      <p>Controle da transmissão em tempo real</p>
+    </div>
+    <div class="status-badges">
+      <span class="badge" id="badgeVisor"><span class="dot" id="dotVisor"></span> <span id="txtVisor">Visualizador</span></span>
+      <span class="badge" id="badgeModo">MODO: <strong id="txtModo">-</strong></span>
+    </div>
+  </header>
+
+  <!-- Fila & Status -->
+  <div class="stats-row">
+    <div class="stat-card">
+      <div class="stat-number" id="numPresentes">0</div>
+      <div class="stat-label">Presentes na Fila</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="numComentarios">0</div>
+      <div class="stat-label">Comentários na Fila</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-number" id="numFollows">0</div>
+      <div class="stat-label">Seguidores na Fila</div>
+    </div>
+  </div>
+
+  <!-- Fala Rápida -->
+  <div class="card">
+    <div class="card-title">
+      <span>Forçar Fala da Personagem</span>
+      <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">Fala imediatamente</span>
+    </div>
+    <div class="input-row">
+      <input type="text" id="inputFala" placeholder="Digite o que a personagem deve dizer...">
+      <button onclick="enviarFala()">Falar</button>
+    </div>
+    <div class="chips">
+      <span class="chip" onclick="falaChip(this)">Boa noite, pessoal! Sejam muito bem-vindos!</span>
+      <span class="chip" onclick="falaChip(this)">Manda um presente aí no chat que eu respondo!</span>
+      <span class="chip" onclick="falaChip(this)">Muito obrigado a todo mundo que tá fortalecendo a live!</span>
+      <span class="chip" onclick="falaChip(this)">Bora bater a meta de hoje, família!</span>
+      <span class="chip" onclick="falaChip(this)">Valeu demais pelo carinho de todos vocês!</span>
+    </div>
+  </div>
+
+  <!-- Metas em Tempo Real -->
+  <div class="card">
+    <div class="card-title">Metas da Live</div>
+    <div class="metas-grid" id="containerMetas">
+      <!-- Gerado dinamicamente -->
+    </div>
+  </div>
+
+  <!-- Controle de Áudio & Voz -->
+  <div class="card">
+    <div class="card-title">Música & Voz</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;">
+      <div class="slider-row">
+        <div class="slider-label">
+          <span>Volume da Música de Fundo</span>
+          <strong id="valMusica">15%</strong>
+        </div>
+        <input type="range" id="sliderMusica" min="0" max="100" value="15" oninput="ajustarVolume(this.value)">
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        <span class="slider-label">Voz Ativa</span>
+        <select id="selVoz" onchange="alterarVoz(this.value)">
+          <option value="pt-BR-FranciscaNeural">Francisca (Feminina)</option>
+          <option value="pt-BR-AntonioNeural">Antônio (Masculino)</option>
+          <option value="pt-BR-ThalitaNeural">Thalita (Feminina)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Simulador de Eventos / Testes -->
+  <div class="card">
+    <div class="card-title">Simulador de Eventos (Testes)</div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <button class="secondary" onclick="simular('presente', 'Rosa', 5, 5)">🎁 +5 Rosas</button>
+      <button class="secondary" onclick="simular('presente', 'Leão', 1, 500)">🦁 +1 Leão (Grande)</button>
+      <button class="secondary" onclick="simular('follow')">⭐ +1 Novo Seguidor</button>
+      <button class="secondary" onclick="simular('comentario')">💬 +1 Comentário</button>
+    </div>
+  </div>
+
+  <!-- Feed de Atividades Recentes -->
+  <div class="card">
+    <div class="card-title">Atividade Recente</div>
+    <div class="feed-list" id="feedEventos">
+      <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:12px;">Nenhum evento registrado ainda.</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let estadoAtual = null;
+
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(t.timer);
+  t.timer = setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+async function atualizarEstado() {
+  try {
+    const res = await fetch("/api/estado");
+    if (!res.ok) return;
+    const data = await res.json();
+    estadoAtual = data;
+
+    // Badges
+    const conectados = data.visores_conectados || 0;
+    const dotVisor = document.getElementById("dotVisor");
+    const txtVisor = document.getElementById("txtVisor");
+    if (conectados > 0) {
+      dotVisor.className = "dot online";
+      txtVisor.textContent = `${conectados} Visor(es)`;
+    } else {
+      dotVisor.className = "dot offline";
+      txtVisor.textContent = "Visor Desconectado";
+    }
+    document.getElementById("txtModo").textContent = (data.modo || "teste").toUpperCase();
+
+    // Fila
+    document.getElementById("numPresentes").textContent = data.fila?.regalos || 0;
+    document.getElementById("numComentarios").textContent = data.fila?.comentarios || 0;
+    document.getElementById("numFollows").textContent = data.fila?.follows || 0;
+
+    // Sliders & Seletores (se não estiver arrastando)
+    if (!document.getElementById("sliderMusica").matches(":active")) {
+      document.getElementById("sliderMusica").value = data.musica_volume ?? 15;
+      document.getElementById("valMusica").textContent = `${data.musica_volume ?? 15}%`;
+    }
+    if (data.voz) {
+      document.getElementById("selVoz").value = data.voz;
+    }
+
+    // Metas
+    renderizarMetas(data.metas || {});
+
+    // Feed de eventos
+    renderizarFeed(data.historico || []);
+  } catch (e) {
+    console.error("Erro ao atualizar estado:", e);
+  }
+}
+
+function renderizarMetas(metas) {
+  const container = document.getElementById("containerMetas");
+  const chaves = Object.keys(metas);
+  if (!chaves.length) {
+    container.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem;">Nenhuma meta configurada.</div>';
+    return;
+  }
+  let html = "";
+  for (const chave of chaves) {
+    const m = metas[chave];
+    const pct = Math.min(100, Math.round((m.progreso / m.objetivo) * 100));
+    html += `
+      <div class="meta-box" style="border-left: 4px solid ${m.color || '#F2A33A'};">
+        <div class="meta-header">
+          <span>${m.titulo}</span>
+          <span style="color: ${m.color || '#fff'};">${m.progreso} / ${m.objetivo} ${m.unidad} (${pct}%)</span>
+        </div>
+        <div class="meta-progress-bar">
+          <div class="meta-progress-fill" style="width: ${pct}%; background: ${m.color || '#F2A33A'};"></div>
+        </div>
+        <div class="meta-controls">
+          <button class="secondary" onclick="alterarMeta('${chave}', ${m.progreso + 10})">+10</button>
+          <button class="secondary" onclick="alterarMeta('${chave}', ${m.progreso + 50})">+50</button>
+          <button class="secondary" onclick="alterarMeta('${chave}', ${m.progreso + 100})">+100</button>
+          <button class="danger" onclick="alterarMeta('${chave}', 0)">Zerar</button>
+        </div>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+function renderizarFeed(historico) {
+  const feed = document.getElementById("feedEventos");
+  if (!historico.length) {
+    feed.innerHTML = '<div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:12px;">Nenhum evento registrado ainda.</div>';
+    return;
+  }
+  let html = "";
+  for (const item of historico.slice(0, 15)) {
+    let tag = "💬";
+    let cor = "#A6DD7A";
+    if (item.tipo === "presente") { tag = "🎁"; cor = "#F2A33A"; }
+    else if (item.tipo === "follow") { tag = "⭐"; cor = "#E0507A"; }
+
+    html += `
+      <div class="feed-item">
+        <div>
+          <span class="feed-tag" style="color:${cor}">${tag} ${item.nome}</span>
+          <span style="color:var(--text-muted);">${item.detalhe}</span>
+        </div>
+        <span class="feed-time">${item.hora || ''}</span>
+      </div>
+    `;
+  }
+  feed.innerHTML = html;
+}
+
+async function enviarFala() {
+  const input = document.getElementById("inputFala");
+  const texto = input.value.trim();
+  if (!texto) return;
+  input.value = "";
+  try {
+    const res = await fetch("/api/falar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texto })
+    });
+    const d = await res.json();
+    if (d.ok) toast("Fala enviada à personagem!");
+  } catch (e) {
+    toast("Erro ao enviar fala");
+  }
+}
+
+function falaChip(el) {
+  document.getElementById("inputFala").value = el.textContent;
+  enviarFala();
+}
+
+async function alterarMeta(chave, novoValor) {
+  try {
+    const res = await fetch("/api/meta", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clave: chave, progreso: novoValor })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      toast("Meta atualizada!");
+      atualizarEstado();
+    }
+  } catch (e) {
+    toast("Erro ao alterar meta");
+  }
+}
+
+let timeoutMusica;
+function ajustarVolume(val) {
+  document.getElementById("valMusica").textContent = `${val}%`;
+  clearTimeout(timeoutMusica);
+  timeoutMusica = setTimeout(async () => {
+    try {
+      await fetch("/api/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ musica_volume: parseInt(val) })
+      });
+      toast(`Volume alterado para ${val}%`);
+    } catch (e) {}
+  }, 200);
+}
+
+async function alterarVoz(voz) {
+  try {
+    await fetch("/api/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ voz })
+    });
+    toast(`Voz alterada para ${voz}`);
+  } catch (e) {}
+}
+
+async function simular(tipo, item, qtd, diamantes) {
+  const payload = { tipo };
+  if (tipo === "presente") {
+    payload.nombre = "Apoiador";
+    payload.regalo = item || "Rosa";
+    payload.cantidad = qtd || 1;
+    payload.diamantes = diamantes || 1;
+  } else if (tipo === "follow") {
+    payload.nombre = "NovoSeguidor";
+  } else if (tipo === "comentario") {
+    payload.nombre = "Apoiador";
+    payload.texto = "Adorei a live! Me manda um salve?";
+  }
+  try {
+    await fetch("/api/simular", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    toast(`Evento de ${tipo} simulado!`);
+    atualizarEstado();
+  } catch (e) {}
+}
+
+// Enter no input de fala
+document.getElementById("inputFala").addEventListener("keydown", e => {
+  if (e.key === "Enter") enviarFala();
+});
+
+// Polling suave a cada 1.5s
+setInterval(atualizarEstado, 1500);
+atualizarEstado();
+</script>
+</body>
+</html>

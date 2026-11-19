@@ -68,7 +68,9 @@ No Flow, gere a imagem e em seguida os dois vídeos indicados pelo DeepSeek: **r
 
 1. Dê um duplo clique em **`iniciar.bat`**. Na primeira vez, ele instalará as bibliotecas necessárias. Se o Windows exibir um aviso de proteção: clique em **Mais informações → Executar mesmo assim**.
 2. Abra `http://localhost:8765` no Chrome e **dê um clique na página** para liberar o som.
-3. Digite comandos na janela preta para testar:
+3. Você pode testar pelo **Painel de Controle Web** ou pela janela preta:
+   - **No navegador ou celular:** abra `http://localhost:8765/painel` para acionar falas rápidas, alterar metas em tempo real, ajustar volumes e simular eventos com um clique.
+   - **Na janela preta:** digite comandos manuais:
 
 | Comando | O que simula |
 |---|---|
@@ -139,6 +141,7 @@ Todas as opções (metas, letreiros, legendas, filtros, música, posições) est
 | `personalidade.txt` | A personalidade e história da sua personagem. |
 | `script.py` | Programa principal: lê a live, processa com IA e gera a voz. |
 | `visor.html` | Exibição em tela: personagem animado, legendas, metas e avisos. |
+| `painel.html` | Painel de controle web para monitorar e gerenciar a live pelo PC ou celular. |
 
 ## Recomendações e responsabilidade
 

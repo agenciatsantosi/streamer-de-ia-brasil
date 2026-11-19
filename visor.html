@@ -454,6 +454,15 @@ function conectarScript() {
       if (volumenMusica > 0) iniciarMusica(); else musica.pause();
       usarSubtitulos = mensaje.subtitulos !== false;
     }
+    if (mensaje.tipo === "volumen_musica") {
+      volumenMusica = (mensaje.volumen ?? 0) / 100;
+      if (volumenMusica > 0) {
+        if (musica.paused) iniciarMusica();
+        else musica.volume = volumenMusica;
+      } else {
+        musica.pause();
+      }
+    }
     if (mensaje.tipo === "meta") actualizarMeta(mensaje);
     if (mensaje.tipo === "aviso") mostrarAviso(mensaje.icono, mensaje.texto);
     if (mensaje.tipo === "hablar") {
