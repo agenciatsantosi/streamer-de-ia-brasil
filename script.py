@@ -785,6 +785,7 @@ async def trabajador(sesion):
 
 
 async def atender_cola(sesion):
+    global ultimo_evento_hora
     avisado = False
     while True:
         if not clientes_visor:
