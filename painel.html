@@ -107,13 +107,53 @@
   }
 
   /* Queue and Stats */
-  .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
   .stat-card {
     background: #111413; border: 1px solid var(--border); border-radius: 12px;
     padding: 12px; text-align: center;
   }
+  .stat-card.vip {
+    border-color: rgba(242, 163, 58, 0.4);
+    background: linear-gradient(180deg, rgba(242, 163, 58, 0.12) 0%, #111413 100%);
+  }
+  .stat-card.vip .stat-number { color: var(--gold); }
+  .stat-card.moedas {
+    border-color: rgba(37, 244, 238, 0.3);
+    background: linear-gradient(180deg, rgba(37, 244, 238, 0.08) 0%, #111413 100%);
+  }
+  .stat-card.moedas .stat-number { color: var(--accent-light); }
   .stat-number { font-size: 1.4rem; font-weight: 700; color: #fff; }
   .stat-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 2px; }
+
+  /* Ranking Podium & Table */
+  .podium-container {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px;
+  }
+  .podium-slot {
+    background: #111413; border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 8px; text-align: center; display: flex; flex-direction: column; align-items: center;
+  }
+  .podium-slot.first {
+    border-color: rgba(242, 163, 58, 0.6);
+    background: linear-gradient(180deg, rgba(242, 163, 58, 0.16) 0%, #111413 100%);
+    order: 2;
+    transform: translateY(-4px);
+  }
+  .podium-slot.second {
+    border-color: rgba(192, 192, 192, 0.35);
+    order: 1;
+  }
+  .podium-slot.third {
+    border-color: rgba(205, 127, 50, 0.35);
+    order: 3;
+  }
+  .podium-medal { font-size: 1.6rem; margin-bottom: 2px; }
+  .podium-name { font-weight: 700; font-size: 0.88rem; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .podium-coins { font-size: 0.8rem; color: var(--gold); font-weight: 600; margin-top: 2px; }
+  .ranking-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .ranking-table th { text-align: left; padding: 6px 10px; color: var(--text-muted); border-bottom: 1px solid var(--border); font-size: 0.75rem; }
+  .ranking-table td { padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .ranking-rank { font-weight: 700; width: 36px; text-align: center; }
 
   /* Feed & History */
   .feed-list {
@@ -156,17 +196,25 @@
 
   <!-- Fila & Status -->
   <div class="stats-row">
+    <div class="stat-card vip">
+      <div class="stat-number" id="numVip">0</div>
+      <div class="stat-label">👑 Fila VIP (Prioritária)</div>
+    </div>
     <div class="stat-card">
       <div class="stat-number" id="numPresentes">0</div>
-      <div class="stat-label">Presentes na Fila</div>
+      <div class="stat-label">🎁 Presentes Comuns</div>
     </div>
     <div class="stat-card">
       <div class="stat-number" id="numComentarios">0</div>
-      <div class="stat-label">Comentários na Fila</div>
+      <div class="stat-label">💬 Comentários</div>
     </div>
     <div class="stat-card">
       <div class="stat-number" id="numFollows">0</div>
-      <div class="stat-label">Seguidores na Fila</div>
+      <div class="stat-label">⭐ Seguidores</div>
+    </div>
+    <div class="stat-card moedas">
+      <div class="stat-number" id="numMoedasLive">0</div>
+      <div class="stat-label">🪙 Moedas da Live</div>
     </div>
   </div>
 
@@ -236,15 +284,61 @@
     </div>
   </div>
 
+  <!-- Ranking de Top Apoiadores / Top Gifters -->
+  <div class="card">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>🏆 Ranking de Apoiadores (Top Gifters da Live)</span>
+        <span style="font-size:0.75rem; background:rgba(242,163,58,0.15); color:var(--gold); padding:2px 8px; border-radius:999px;">Top 1 no Visor</span>
+      </div>
+      <button class="danger" style="padding:4px 10px; font-size:0.75rem;" onclick="zerarRanking()">Zerar Ranking</button>
+    </div>
+    
+    <div class="podium-container" id="podiumRanking">
+      <div class="podium-slot second">
+        <div class="podium-medal">🥈</div>
+        <div class="podium-name" id="podium2Nome">-</div>
+        <div class="podium-coins" id="podium2Moedas">0 moedas</div>
+      </div>
+      <div class="podium-slot first">
+        <div class="podium-medal">🥇</div>
+        <div class="podium-name" id="podium1Nome">-</div>
+        <div class="podium-coins" id="podium1Moedas">0 moedas</div>
+      </div>
+      <div class="podium-slot third">
+        <div class="podium-medal">🥉</div>
+        <div class="podium-name" id="podium3Nome">-</div>
+        <div class="podium-coins" id="podium3Moedas">0 moedas</div>
+      </div>
+    </div>
+
+    <div style="max-height: 180px; overflow-y: auto;">
+      <table class="ranking-table">
+        <thead>
+          <tr>
+            <th class="ranking-rank">Pos</th>
+            <th>Apoiador</th>
+            <th>Presentes</th>
+            <th style="text-align:right;">Total Moedas</th>
+          </tr>
+        </thead>
+        <tbody id="listaRanking">
+          <tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:16px;">Nenhum presente registrado nesta sessão.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- Simulador de Eventos / Testes -->
   <div class="card">
     <div class="card-title">Simulador de Eventos & Efeitos</div>
     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-      <button style="background:var(--gold); color:#000;" onclick="dispararConfetesPainel()">🎉 Disparar Confetes</button>
-      <button class="secondary" onclick="simular('presente', 'Rosa', 5, 5)">🎁 +5 Rosas</button>
-      <button class="secondary" onclick="simular('presente', 'Leão', 1, 500)">🦁 +1 Leão (Grande)</button>
+      <button style="background:var(--gold); color:#000; font-weight:700;" onclick="simular('presente', 'Leão', 1, 500)">👑 Simular Presente VIP (+500 moedas)</button>
+      <button class="secondary" onclick="simular('presente', 'Rosa', 5, 5)">🎁 +5 Rosas (Comum)</button>
       <button class="secondary" onclick="simular('follow')">⭐ +1 Novo Seguidor</button>
       <button class="secondary" onclick="simular('comentario')">💬 +1 Comentário</button>
+      <button style="background:rgba(255,255,255,0.1); color:#fff;" onclick="dispararConfetesPainel()">🎉 Disparar Confetes no Visor</button>
+      <button class="secondary" onclick="forcarAntiSilencio()">📢 Puxar Assunto Agora</button>
     </div>
   </div>
 
@@ -291,9 +385,11 @@ async function atualizarEstado() {
     document.getElementById("txtModo").textContent = (data.modo || "teste").toUpperCase();
 
     // Fila
-    document.getElementById("numPresentes").textContent = data.fila?.regalos || 0;
+    document.getElementById("numVip").textContent = data.fila?.regalos_vip || 0;
+    document.getElementById("numPresentes").textContent = Math.max(0, (data.fila?.regalos || 0) - (data.fila?.regalos_vip || 0));
     document.getElementById("numComentarios").textContent = data.fila?.comentarios || 0;
     document.getElementById("numFollows").textContent = data.fila?.follows || 0;
+    document.getElementById("numMoedasLive").textContent = (data.total_moedas_sessao || 0).toLocaleString("pt-BR");
 
     // Sliders & Seletores (se não estiver arrastando)
     if (!document.getElementById("sliderMusica").matches(":active")) {
@@ -326,10 +422,66 @@ async function atualizarEstado() {
       }
     }
 
+    // Ranking de Apoiadores
+    renderizarRanking(data.ranking || []);
+
     // Feed de eventos
     renderizarFeed(data.historico || []);
   } catch (e) {
     console.error("Erro ao atualizar estado:", e);
+  }
+}
+
+function renderizarRanking(ranking) {
+  const top1 = ranking[0] || null;
+  const top2 = ranking[1] || null;
+  const top3 = ranking[2] || null;
+
+  document.getElementById("podium1Nome").textContent = top1 ? top1.nome : "-";
+  document.getElementById("podium1Moedas").textContent = top1 ? `${top1.moedas.toLocaleString("pt-BR")} moedas` : "0 moedas";
+
+  document.getElementById("podium2Nome").textContent = top2 ? top2.nome : "-";
+  document.getElementById("podium2Moedas").textContent = top2 ? `${top2.moedas.toLocaleString("pt-BR")} moedas` : "0 moedas";
+
+  document.getElementById("podium3Nome").textContent = top3 ? top3.nome : "-";
+  document.getElementById("podium3Moedas").textContent = top3 ? `${top3.moedas.toLocaleString("pt-BR")} moedas` : "0 moedas";
+
+  const lista = document.getElementById("listaRanking");
+  if (!ranking.length) {
+    lista.innerHTML = '<tr><td colspan="4" style="text-align:center; color:var(--text-muted); padding:16px;">Nenhum presente registrado nesta sessão.</td></tr>';
+    return;
+  }
+
+  let html = "";
+  ranking.forEach((item, idx) => {
+    let medalha = `${idx + 1}º`;
+    if (idx === 0) medalha = "🥇 1º";
+    else if (idx === 1) medalha = "🥈 2º";
+    else if (idx === 2) medalha = "🥉 3º";
+
+    html += `
+      <tr>
+        <td class="ranking-rank">${medalha}</td>
+        <td><strong>${item.nome}</strong></td>
+        <td style="color:var(--text-muted);">${item.presentes} presente(s)</td>
+        <td style="text-align:right; color:var(--gold); font-weight:700;">${item.moedas.toLocaleString("pt-BR")}</td>
+      </tr>
+    `;
+  });
+  lista.innerHTML = html;
+}
+
+async function zerarRanking() {
+  if (!confirm("Tem certeza que deseja zerar o ranking de apoiadores da sessão atual?")) return;
+  try {
+    const res = await fetch("/api/ranking/zerar", { method: "POST" });
+    const d = await res.json();
+    if (d.ok) {
+      toast("Ranking de apoiadores zerado!");
+      atualizarEstado();
+    }
+  } catch (e) {
+    toast("Erro ao zerar ranking");
   }
 }
 
@@ -375,8 +527,18 @@ function renderizarFeed(historico) {
   for (const item of historico.slice(0, 15)) {
     let tag = "💬";
     let cor = "#A6DD7A";
-    if (item.tipo === "presente") { tag = "🎁"; cor = "#F2A33A"; }
-    else if (item.tipo === "follow") { tag = "⭐"; cor = "#E0507A"; }
+    if (item.tipo === "presente") {
+      if (item.vip) {
+        tag = "👑 VIP";
+        cor = "#FFD700";
+      } else {
+        tag = "🎁";
+        cor = "#F2A33A";
+      }
+    } else if (item.tipo === "follow") {
+      tag = "⭐";
+      cor = "#E0507A";
+    }
 
     html += `
       <div class="feed-item">

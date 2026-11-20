@@ -465,6 +465,20 @@ function conectarScript() {
       }
     }
     if (mensaje.tipo === "confetes") dispararConfetes(mensaje.quantidade || 90);
+    if (mensaje.tipo === "top_doador") {
+      const textoDoador = `👑 Top Apoiador: ${mensaje.nome} (${mensaje.moedas} moedas)`;
+      const idx = letreros.findIndex(t => t.startsWith("👑 Top Apoiador"));
+      if (idx !== -1) {
+        letreros[idx] = textoDoador;
+      } else {
+        letreros.push(textoDoador);
+        if (letreros.length > 1 && !cicloLetreros) {
+          cicloLetreros = setInterval(siguienteLetrero, SEGUNDOS_POR_LETRERO * 1000);
+        }
+      }
+      if (letreros.length === 1) letrero.textContent = textoDoador;
+      mostrarAviso("👑", `${mensaje.nome} assumiu o Top 1 Apoiador!`);
+    }
     if (mensaje.tipo === "meta") actualizarMeta(mensaje);
     if (mensaje.tipo === "aviso") mostrarAviso(mensaje.icono, mensaje.texto);
     if (mensaje.tipo === "hablar") {

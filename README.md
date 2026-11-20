@@ -18,12 +18,15 @@ Projeto do tutorial de **Santi Studio** no YouTube ([@SantiStudioOficial](https:
 | Recurso | O que faz |
 |---|---|
 | **Presentes** | Agradece cada presente pelo nome e responde à próxima mensagem de quem enviou. |
+| **Fila VIP** | Presentes grandes (100+ moedas) furam a fila com prioridade máxima e ganham destaque especial `👑 VIP`. |
+| **Ranking de Apoiadores** | Classificação em tempo real dos maiores doadores (Top Gifters) da live, com pódio no painel e exibição do #1 na tela. |
 | **Seguidores** | Dá as boas-vindas a quem começa a seguir você e agrupa várias pessoas em uma única fala. |
 | **Voz** | Fala com voz natural brasileira e sincroniza o movimento da boca com o áudio. |
 | **Legendas** | Digitadas em tempo real no ritmo da fala, com painel indicando quem está sendo respondido. |
 | **Metas** | Metas de moedas e de seguidores que a personagem comemora quando são batidas. |
 | **Confetes** | Chuva de confetes coloridos na tela ao bater metas ou receber presentes grandes. |
 | **Anti-Silêncio** | Puxa assunto automaticamente com o chat para a live nunca ficar em vácuo. |
+| **Painel Web** | Gerencie tudo pelo navegador ou celular (`/painel`) com botões de fala rápida, sliders de som, metas e ranking. |
 | **Filtros** | Bloqueio de palavrões e nomes ofensivos, com regras adequadas para um público amplo. |
 | **Backup** | Se uma IA falhar ou atingir o limite, tenta a próxima; se todas falharem, usa frases de backup. A live nunca fica em silêncio. |
 

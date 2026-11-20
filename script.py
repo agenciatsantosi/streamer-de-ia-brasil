@@ -406,6 +406,7 @@ ya_siguieron = set()
 ultimas_respuestas = []
 metas_por_celebrar = []
 historico_eventos = []
+top_doadores = {}
 
 for _meta in METAS.values():
     try:
@@ -463,27 +464,53 @@ def registrar_regalo(uid, nombre, regalo, cantidad, diamantes):
     global ultimo_evento_hora
     ultimo_evento_hora = time.time()
     nombre = nombre_seguro(nombre)
+    valor_total = diamantes * cantidad
+    is_vip = valor_total >= 100 or regalo.lower() in REGALOS_GRANDES_PRUEBA
+
     for r in regalos_pendientes:
         if r["uid"] == uid and r["regalo"] == regalo:
             r["cantidad"] += cantidad
-            r["valor"] += diamantes * cantidad
+            r["valor"] += valor_total
+            r["vip"] = r.get("vip", False) or is_vip
             break
     else:
         regalos_pendientes.append({"uid": uid, "nombre": nombre, "regalo": regalo,
-                                   "cantidad": cantidad, "valor": diamantes * cantidad})
+                                   "cantidad": cantidad, "valor": valor_total, "vip": is_vip})
+
+    # Fila VIP: presentes maiores têm prioridade máxima na fila
+    regalos_pendientes.sort(key=lambda x: (x.get("vip", False), x["valor"]), reverse=True)
+
     if RESPONDER_COMENTARIOS:
         pases[uid] = min(pases.get(uid, 0) + 1, 3)
-    log(f"Presente: {nombre} enviou {cantidad} x {regalo}")
+
+    # Ranking de Apoiadores (Top Gifters da sessão)
+    if uid not in top_doadores:
+        top_doadores[uid] = {"nome": nombre, "moedas": 0, "presentes": 0}
+    top_doadores[uid]["nome"] = nombre
+    top_doadores[uid]["moedas"] += valor_total
+    top_doadores[uid]["presentes"] += cantidad
+
+    log(f"Presente{' [VIP]' if is_vip else ''}: {nombre} enviou {cantidad} x {regalo} ({valor_total} moedas)")
     historico_eventos.insert(0, {
         "hora": hora(), "tipo": "presente", "nome": nombre,
-        "detalhe": f"{cantidad}× {regalo}", "valor": diamantes * cantidad
+        "detalhe": f"{cantidad}× {regalo}", "valor": valor_total,
+        "vip": is_vip
     })
     del historico_eventos[50:]
+
     if AVISOS_EN_PANTALLA:
-        enviar_a_visores({"tipo": "aviso", "icono": "🎁", "texto": f"{nombre} enviou {cantidad} × {regalo}"})
-    if diamantes * cantidad >= 100 or regalo.lower() in REGALOS_GRANDES_PRUEBA:
+        icone = "👑" if is_vip else "🎁"
+        enviar_a_visores({"tipo": "aviso", "icono": icone, "texto": f"{nombre} enviou {cantidad} × {regalo}"})
+
+    if is_vip:
         enviar_a_visores({"tipo": "confetes", "quantidade": 90})
-    sumar_a_meta("monedas", diamantes * cantidad)
+
+    # Notifica o maior apoiador atual para o visualizador
+    ranking_top = sorted(top_doadores.values(), key=lambda x: x["moedas"], reverse=True)
+    if ranking_top and ranking_top[0]["moedas"] > 0:
+        enviar_a_visores({"tipo": "top_doador", "nome": ranking_top[0]["nome"], "moedas": ranking_top[0]["moedas"]})
+
+    sumar_a_meta("monedas", valor_total)
 
 
 def registrar_follow(uid, nombre):
@@ -670,9 +697,11 @@ def contexto_de(lote):
         return {"titulo": f"Respondendo a {nombres}", "detalle": lote["comentarios"][0]["texto"]}
     if lote["regalos"]:
         nombres = unir_nombres([r["nombre"] for r in lote["regalos"]])
+        tem_vip = any(r.get("vip") or r["valor"] >= 100 for r in lote["regalos"])
+        titulo = f"👑 Presente VIP de {nombres}" if tem_vip else f"Agradecendo a {nombres}"
         detalle = (f"{lote['regalos'][0]['cantidad']} × {lote['regalos'][0]['regalo']}"
                    if len(lote["regalos"]) == 1 else "Pelos presentes")
-        return {"titulo": f"Agradecendo a {nombres}", "detalle": detalhe}
+        return {"titulo": titulo, "detalle": detalhe}
     if lote["follows"]:
         nombres = unir_nombres([f["nombre"] for f in lote["follows"]])
         return {"titulo": f"Boas-vindas a {nombres}", "detalle": "Obrigado por seguir"}
@@ -855,6 +884,7 @@ async def api_estado(request):
             "color": m["color"],
             "unidad": m["unidad"]
         }
+    ranking_top = sorted(top_doadores.values(), key=lambda x: x["moedas"], reverse=True)
     return web.json_response({
         "modo": MODO,
         "voz": VOZ,
@@ -864,6 +894,7 @@ async def api_estado(request):
         "visores_conectados": len(clientes_visor),
         "fila": {
             "regalos": len(regalos_pendientes),
+            "regalos_vip": sum(1 for r in regalos_pendientes if r.get("vip")),
             "comentarios": len(comentarios_pendientes),
             "follows": len(follows_pendientes)
         },
@@ -872,6 +903,8 @@ async def api_estado(request):
             "tempo": ANTI_SILENCIO_TEMPO,
             "segundos_sem_evento": max(0, int(time.time() - ultimo_evento_hora))
         },
+        "ranking": ranking_top[:10],
+        "total_moedas_sessao": sum(x["moedas"] for x in top_doadores.values()),
         "metas": metas_dict,
         "historico": historico_eventos,
         "ultimas_falas": ultimas_respuestas[-5:]
@@ -991,6 +1024,13 @@ async def api_anti_silencio(request):
         })
     except Exception as e:
         return web.json_response({"ok": False, "erro": str(e)}, status=500)
+
+
+async def api_zerar_ranking(request):
+    global top_doadores
+    top_doadores.clear()
+    log("Ranking de apoiadores zerado via painel")
+    return web.json_response({"ok": True})
 
 
 async def archivo(request):
@@ -1173,6 +1213,7 @@ async def principal():
     app.router.add_post("/api/simular", api_simular)
     app.router.add_post("/api/confetes", api_confetes)
     app.router.add_post("/api/anti_silencio", api_anti_silencio)
+    app.router.add_post("/api/ranking/zerar", api_zerar_ranking)
     app.router.add_get("/", archivo)
     app.router.add_get("/{archivo}", archivo)
 
