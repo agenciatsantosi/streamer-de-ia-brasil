@@ -609,7 +609,7 @@ def construir_mensajes(lote):
             lineas.append(f"- {nombres} começou a te seguir. Dê as boas-vindas.")
         else:
             lineas.append(f"- Começaram a te seguir: {nombres}. Dê as boas-vindas.")
-    for clave in lote.get("metas", []):
+    for clave in (lote.get("metas") or []):
         m = METAS[clave]
         lineas.append(f"- O público acabou de bater a meta de {m['objetivo']} {m['unidad']}! "
                       "Comemore com muita empolgação e agradeça a todos.")
@@ -641,7 +641,7 @@ def poner_en_pausa(p, motivo):
     aviso(f"{p['nombre']} {motivo}; pausado por {espera} s.")
 
 
-async def preguntar_ia(sesion, mensajes):
+async def preguntar_ia(sesion, mensagens):
     for p in PROVEEDORES:
         if p["descanso_hasta"] > time.time():
             continue
