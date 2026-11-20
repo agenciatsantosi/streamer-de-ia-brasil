@@ -699,7 +699,7 @@ def contexto_de(lote):
         nombres = unir_nombres([r["nombre"] for r in lote["regalos"]])
         tem_vip = any(r.get("vip") or r["valor"] >= 100 for r in lote["regalos"])
         titulo = f"👑 Presente VIP de {nombres}" if tem_vip else f"Agradecendo a {nombres}"
-        detalle = (f"{lote['regalos'][0]['cantidad']} × {lote['regalos'][0]['regalo']}"
+        detalhe = (f"{lote['regalos'][0]['cantidad']} × {lote['regalos'][0]['regalo']}"
                    if len(lote["regalos"]) == 1 else "Pelos presentes")
         return {"titulo": titulo, "detalle": detalhe}
     if lote["follows"]:
