@@ -276,18 +276,29 @@ for p in PROVEEDORES:
 
 
 # ======================================================================
-#  Utilitários de texto
+#  Utilitários de texto e Logs
 # ======================================================================
+buffer_logs = []
+
+
 def hora():
     return time.strftime("%H:%M:%S")
 
 
 def log(texto):
-    print(f"[{hora()}] {texto}")
+    global buffer_logs
+    h = hora()
+    print(f"[{h}] {texto}")
+    buffer_logs.insert(0, {"hora": h, "tipo": "info", "texto": str(texto)})
+    del buffer_logs[80:]
 
 
 def aviso(texto):
-    print(f"[{hora()}] AVISO: {texto}")
+    global buffer_logs
+    h = hora()
+    print(f"[{h}] AVISO: {texto}")
+    buffer_logs.insert(0, {"hora": h, "tipo": "aviso", "texto": str(texto)})
+    del buffer_logs[80:]
 
 
 CAMBIOS_TRAMPA = str.maketrans({"0": "o", "1": "i", "3": "e", "4": "a", "5": "s", "7": "t",
@@ -908,6 +919,7 @@ async def api_estado(request):
         "total_moedas_sessao": sum(x["moedas"] for x in top_doadores.values()),
         "metas": metas_dict,
         "historico": historico_eventos,
+        "logs": buffer_logs[:50],
         "ultimas_falas": ultimas_respuestas[-5:]
     })
 
@@ -1031,6 +1043,12 @@ async def api_zerar_ranking(request):
     global top_doadores
     top_doadores.clear()
     log("Ranking de apoiadores zerado via painel")
+    return web.json_response({"ok": True})
+
+
+async def api_limpar_logs(request):
+    global buffer_logs
+    buffer_logs.clear()
     return web.json_response({"ok": True})
 
 
@@ -1215,6 +1233,7 @@ async def principal():
     app.router.add_post("/api/confetes", api_confetes)
     app.router.add_post("/api/anti_silencio", api_anti_silencio)
     app.router.add_post("/api/ranking/zerar", api_zerar_ranking)
+    app.router.add_post("/api/logs/limpar", api_limpar_logs)
     app.router.add_get("/", archivo)
     app.router.add_get("/{archivo}", archivo)
 

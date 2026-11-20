@@ -168,6 +168,19 @@
   .feed-tag { font-weight: 600; font-size: 0.8rem; margin-right: 6px; }
   .feed-time { font-size: 0.72rem; color: var(--text-muted); }
 
+  /* Console de Logs */
+  .terminal-box {
+    background: #090c0a; border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    padding: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    font-size: 0.8rem; max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px;
+  }
+  .log-line { display: flex; gap: 8px; line-height: 1.4; word-break: break-all; }
+  .log-time { color: var(--text-muted); flex-shrink: 0; }
+  .log-tag-info { color: var(--accent-light); font-weight: 600; flex-shrink: 0; }
+  .log-tag-aviso { color: var(--gold); font-weight: 600; flex-shrink: 0; }
+  .log-tag-erro { color: var(--danger); font-weight: 600; flex-shrink: 0; }
+  .log-text { color: #f3f4f0; }
+
   /* Toast Notification */
   #toast {
     position: fixed; bottom: 20px; right: 20px; background: rgba(20,20,20,0.95);
@@ -349,6 +362,20 @@
       <div style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:12px;">Nenhum evento registrado ainda.</div>
     </div>
   </div>
+
+  <!-- Console de Logs do Terminal / Sistema -->
+  <div class="card">
+    <div class="card-title">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span>💻 Console de Logs do Terminal</span>
+        <span style="font-size:0.75rem; background:rgba(37,244,238,0.15); color:var(--accent-light); padding:2px 8px; border-radius:999px;">Tempo Real</span>
+      </div>
+      <button class="secondary" style="padding:4px 10px; font-size:0.75rem;" onclick="limparLogs()">Limpar Console</button>
+    </div>
+    <div class="terminal-box" id="consoleLogs">
+      <div style="color:var(--text-muted); text-align:center; padding:12px;">Aguardando mensagens do terminal...</div>
+    </div>
+  </div>
 </div>
 
 <div id="toast"></div>
@@ -427,6 +454,9 @@ async function atualizarEstado() {
 
     // Feed de eventos
     renderizarFeed(data.historico || []);
+
+    // Console de logs do terminal
+    renderizarLogs(data.logs || []);
   } catch (e) {
     console.error("Erro ao atualizar estado:", e);
   }
@@ -482,6 +512,48 @@ async function zerarRanking() {
     }
   } catch (e) {
     toast("Erro ao zerar ranking");
+  }
+}
+
+function renderizarLogs(logs) {
+  const container = document.getElementById("consoleLogs");
+  if (!logs || !logs.length) {
+    container.innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">Nenhum registro no console.</div>';
+    return;
+  }
+  let html = "";
+  for (const item of logs) {
+    let tagClass = "log-tag-info";
+    let tagTexto = "[INFO]";
+    const txt = item.texto || "";
+    if (item.tipo === "aviso" || txt.startsWith("AVISO")) {
+      tagClass = "log-tag-aviso";
+      tagTexto = "[AVISO]";
+    } else if (item.tipo === "erro" || txt.includes("erro") || txt.includes("Error") || txt.includes("Exception")) {
+      tagClass = "log-tag-erro";
+      tagTexto = "[ERRO]";
+    }
+    html += `
+      <div class="log-line">
+        <span class="log-time">[${item.hora}]</span>
+        <span class="${tagClass}">${tagTexto}</span>
+        <span class="log-text">${txt}</span>
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+}
+
+async function limparLogs() {
+  try {
+    const res = await fetch("/api/logs/limpar", { method: "POST" });
+    const d = await res.json();
+    if (d.ok) {
+      toast("Console de logs limpo!");
+      document.getElementById("consoleLogs").innerHTML = '<div style="color:var(--text-muted); text-align:center; padding:12px;">Console limpo.</div>';
+    }
+  } catch (e) {
+    toast("Erro ao limpar console");
   }
 }
 
