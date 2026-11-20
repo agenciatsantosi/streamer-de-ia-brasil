@@ -95,6 +95,14 @@ POSICAO_META = 14
 # Volume de 0 a 100. Abaixa automaticamente enquanto a personagem fala.
 MUSICA_VOLUME = 15
 
+# ---- Modo Anti-Silêncio (Puxar assunto automático) ----
+# Ativa falas automáticas da personagem quando a live ficar em silêncio.
+ANTI_SILENCIO = sim
+# Tempo em segundos sem eventos para puxar assunto (ex: 75 segundos).
+ANTI_SILENCIO_TEMPO = 75
+# Frases que a personagem pode usar para puxar assunto, separadas por |
+ANTI_SILENCIO_FRASES = E aí pessoal, de onde vocês estão assistindo hoje? | Quem aí já deixou aquele like na live hoje? | Me contem no chat o que vocês estão fazendo de bom! | Se você acabou de chegar na live, seja muito bem-vindo! | Manda um presente no chat que eu respondo sua pergunta!
+
 # ---- Solução de problemas ----
 # Defina como sim para ver na janela preta tudo o que chega do TikFinity.
 DEPURAR = nao

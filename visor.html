@@ -125,6 +125,7 @@
   <video id="reposo" muted loop autoplay playsinline preload="auto"></video>
   <video id="hablando" muted loop autoplay playsinline preload="auto"></video>
 </div>
+<canvas id="canvasConfetes" style="position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:90;"></canvas>
 
 <div id="superior"><div id="metas"></div><div id="avisos"></div></div>
 
@@ -463,6 +464,7 @@ function conectarScript() {
         musica.pause();
       }
     }
+    if (mensaje.tipo === "confetes") dispararConfetes(mensaje.quantidade || 90);
     if (mensaje.tipo === "meta") actualizarMeta(mensaje);
     if (mensaje.tipo === "aviso") mostrarAviso(mensaje.icono, mensaje.texto);
     if (mensaje.tipo === "hablar") {
@@ -550,6 +552,7 @@ function actualizarMeta({ clave, progreso, meta, cumplida }) {
   if (!b) return;
   b.ultima = { clave, progreso, meta, cumplida: false };
   if (cumplida) {
+    dispararConfetes(110);
     b.relleno.style.width = "100%";
     b.numeros.textContent = "Meta batida!";
     b.caja.classList.remove("cumplida");
@@ -657,6 +660,81 @@ function avisarTermine() {
   if (socket && socket.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ tipo: "termine" }));
 }
 voz.addEventListener("ended", avisarTermine);
+// ===== Efeito de Confetes (Canvas nativo) =====
+const canvasConfetes = document.getElementById("canvasConfetes");
+const ctxConfetes = canvasConfetes.getContext("2d");
+let particulasConfete = [];
+let animandoConfetes = false;
+
+function redimensionarCanvas() {
+  canvasConfetes.width = window.innerWidth;
+  canvasConfetes.height = window.innerHeight;
+}
+window.addEventListener("resize", redimensionarCanvas);
+redimensionarCanvas();
+
+const CORES_CONFETE = ["#F2A33A", "#E0507A", "#25F4EE", "#FE2C55", "#A6DD7A", "#FFD700", "#FFFFFF"];
+
+function dispararConfetes(quantidade = 90) {
+  redimensionarCanvas();
+  const w = canvasConfetes.width;
+  const h = canvasConfetes.height;
+  for (let i = 0; i < quantidade; i++) {
+    particulasConfete.push({
+      x: w * (0.2 + Math.random() * 0.6),
+      y: h * (0.1 + Math.random() * 0.3),
+      vx: (Math.random() - 0.5) * 16,
+      vy: -Math.random() * 12 - 5,
+      gravidade: 0.35 + Math.random() * 0.15,
+      resistencia: 0.985,
+      tamanho: 6 + Math.random() * 8,
+      tamanhoY: 10 + Math.random() * 12,
+      rotacao: Math.random() * 360,
+      vRotacao: (Math.random() - 0.5) * 12,
+      cor: CORES_CONFETE[Math.floor(Math.random() * CORES_CONFETE.length)],
+      vida: 1,
+      decaimento: 0.007 + Math.random() * 0.008
+    });
+  }
+  if (!animandoConfetes) {
+    animandoConfetes = true;
+    requestAnimationFrame(loopConfetes);
+  }
+}
+
+function loopConfetes() {
+  ctxConfetes.clearRect(0, 0, canvasConfetes.width, canvasConfetes.height);
+  for (let i = particulasConfete.length - 1; i >= 0; i--) {
+    const p = particulasConfete[i];
+    p.vx *= p.resistencia;
+    p.vy = p.vy * p.resistencia + p.gravidade;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.rotacao += p.vRotacao;
+    p.vida -= p.decaimento;
+
+    if (p.vida <= 0 || p.y > canvasConfetes.height + 25) {
+      particulasConfete.splice(i, 1);
+      continue;
+    }
+
+    ctxConfetes.save();
+    ctxConfetes.globalAlpha = Math.max(0, p.vida);
+    ctxConfetes.translate(p.x, p.y);
+    ctxConfetes.rotate((p.rotacao * Math.PI) / 180);
+    ctxConfetes.fillStyle = p.cor;
+    ctxConfetes.fillRect(-p.tamanho / 2, -p.tamanhoY / 2, p.tamanho, p.tamanhoY);
+    ctxConfetes.restore();
+  }
+
+  if (particulasConfete.length > 0) {
+    requestAnimationFrame(loopConfetes);
+  } else {
+    animandoConfetes = false;
+    ctxConfetes.clearRect(0, 0, canvasConfetes.width, canvasConfetes.height);
+  }
+}
+
 conectarScript();
 </script>
 </body>

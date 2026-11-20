@@ -116,6 +116,12 @@ def leer_configuracion():
     if not ruta.exists():
         ruta = CARPETA / "configuracion.txt"
     if not ruta.exists():
+        exemplo = CARPETA / "configuracao.exemplo.txt"
+        if exemplo.exists():
+            import shutil
+            shutil.copyfile(exemplo, CARPETA / "configuracao.txt")
+            ruta = CARPETA / "configuracao.txt"
+    if not ruta.exists():
         salir_con_error("Não encontrei configuracao.txt na pasta do script.")
     conf = {}
     for linea in ruta.read_text(encoding="utf-8-sig").splitlines():
@@ -191,6 +197,18 @@ def decimal_conf(clave, defecto, minimo=0.0, maximo=10.0):
 
 
 POSICION_TEXTOS = numero_conf("POSICAO_TEXTOS", numero_conf("POSICION_TEXTOS", 60, 5, 95), 5, 95)
+ANTI_SILENCIO = es_si(CONF.get("ANTI_SILENCIO", "sim"))
+ANTI_SILENCIO_TEMPO = numero_conf("ANTI_SILENCIO_TEMPO", 75, 20, 600)
+frases_padrao_silencio = (
+    "E aí pessoal, de onde vocês estão assistindo hoje? | "
+    "Quem aí já deixou aquele like na live hoje? | "
+    "Me contem no chat o que vocês estão fazendo de bom! | "
+    "Se você acabou de chegar na live, seja muito bem-vindo! | "
+    "Manda um presente no chat que eu respondo sua próxima pergunta!"
+)
+frases_conf_silencio = CONF.get("ANTI_SILENCIO_FRASES") or frases_padrao_silencio
+ANTI_SILENCIO_FRASES = [f.strip() for f in frases_conf_silencio.split("|") if f.strip()]
+ultimo_evento_hora = time.time()
 MUSICA_VOLUMEN = numero_conf("MUSICA_VOLUME", numero_conf("MUSICA_VOLUMEN", 15, 0, 100), 0, 100)
 MARGENES_AUTOMATICOS = es_si(CONF.get("MARGENS_AUTOMATICAS") or CONF.get("MARGENES_AUTOMATICOS", "sim"))
 MARGEN_INICIO = decimal_conf("MARGEM_FALANDO_INICIO", decimal_conf("MARGEN_HABLANDO_INICIO", 0.8))
@@ -442,6 +460,8 @@ async def enviar_seguro(ws, mensaje):
 
 
 def registrar_regalo(uid, nombre, regalo, cantidad, diamantes):
+    global ultimo_evento_hora
+    ultimo_evento_hora = time.time()
     nombre = nombre_seguro(nombre)
     for r in regalos_pendientes:
         if r["uid"] == uid and r["regalo"] == regalo:
@@ -461,10 +481,14 @@ def registrar_regalo(uid, nombre, regalo, cantidad, diamantes):
     del historico_eventos[50:]
     if AVISOS_EN_PANTALLA:
         enviar_a_visores({"tipo": "aviso", "icono": "🎁", "texto": f"{nombre} enviou {cantidad} × {regalo}"})
+    if diamantes * cantidad >= 100 or regalo.lower() in REGALOS_GRANDES_PRUEBA:
+        enviar_a_visores({"tipo": "confetes", "quantidade": 90})
     sumar_a_meta("monedas", diamantes * cantidad)
 
 
 def registrar_follow(uid, nombre):
+    global ultimo_evento_hora
+    ultimo_evento_hora = time.time()
     if uid in ya_siguieron:
         return
     nombre = nombre_seguro(nombre)
@@ -481,6 +505,8 @@ def registrar_follow(uid, nombre):
 
 
 def registrar_comentario(uid, nombre, texto):
+    global ultimo_evento_hora
+    ultimo_evento_hora = time.time()
     if not RESPONDER_COMENTARIOS or pases.get(uid, 0) <= 0 or not texto.strip():
         return
     if contiene_prohibida(texto):
@@ -683,6 +709,8 @@ termino = None
 
 
 async def hablar(texto, contexto=None):
+    global ultimo_evento_hora
+    ultimo_evento_hora = time.time()
     audio = b""
     for intento in range(3):
         try:
@@ -739,6 +767,14 @@ async def atender_cola(sesion):
         avisado = False
         lote = tomar_lote()
         if not lote:
+            agora = time.time()
+            if ANTI_SILENCIO and (agora - ultimo_evento_hora >= ANTI_SILENCIO_TEMPO) and clientes_visor:
+                ultimo_evento_hora = agora
+                texto = random.choice(ANTI_SILENCIO_FRASES)
+                log(f"Anti-silêncio: {texto}")
+                ultimas_respuestas.append(texto)
+                del ultimas_respuestas[:-5]
+                await hablar(texto, {"titulo": "Papo com o chat", "detalle": "Puxando assunto"})
             await asyncio.sleep(0.3)
             continue
         texto, fuente = (None, None)
@@ -831,6 +867,11 @@ async def api_estado(request):
             "comentarios": len(comentarios_pendientes),
             "follows": len(follows_pendientes)
         },
+        "anti_silencio": {
+            "ativo": ANTI_SILENCIO,
+            "tempo": ANTI_SILENCIO_TEMPO,
+            "segundos_sem_evento": max(0, int(time.time() - ultimo_evento_hora))
+        },
         "metas": metas_dict,
         "historico": historico_eventos,
         "ultimas_falas": ultimas_respuestas[-5:]
@@ -915,6 +956,39 @@ async def api_simular(request):
         else:
             return web.json_response({"ok": False, "erro": "Tipo desconhecido"}, status=400)
         return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"ok": False, "erro": str(e)}, status=500)
+
+
+async def api_confetes(request):
+    try:
+        dados = await request.json() if request.can_read_body else {}
+        qtd = int(dados.get("quantidade", 100)) if isinstance(dados, dict) else 100
+    except Exception:
+        qtd = 100
+    enviar_a_visores({"tipo": "confetes", "quantidade": qtd})
+    log("Confetes disparados pelo Painel!")
+    return web.json_response({"ok": True})
+
+
+async def api_anti_silencio(request):
+    global ANTI_SILENCIO, ANTI_SILENCIO_TEMPO, ultimo_evento_hora
+    try:
+        dados = await request.json()
+        if "ativo" in dados:
+            ANTI_SILENCIO = bool(dados["ativo"])
+        if "tempo" in dados:
+            ANTI_SILENCIO_TEMPO = max(20, min(600, int(dados["tempo"])))
+        if dados.get("forcar"):
+            texto = random.choice(ANTI_SILENCIO_FRASES)
+            ultimo_evento_hora = time.time()
+            asyncio.create_task(hablar(texto, {"titulo": "Papo com o chat", "detalle": "Puxando assunto"}))
+            log(f"Puxar assunto forçado pelo Painel: {texto}")
+        return web.json_response({
+            "ok": True,
+            "ativo": ANTI_SILENCIO,
+            "tempo": ANTI_SILENCIO_TEMPO
+        })
     except Exception as e:
         return web.json_response({"ok": False, "erro": str(e)}, status=500)
 
@@ -1097,6 +1171,8 @@ async def principal():
     app.router.add_post("/api/meta", api_meta)
     app.router.add_post("/api/config", api_config)
     app.router.add_post("/api/simular", api_simular)
+    app.router.add_post("/api/confetes", api_confetes)
+    app.router.add_post("/api/anti_silencio", api_anti_silencio)
     app.router.add_get("/", archivo)
     app.router.add_get("/{archivo}", archivo)
 

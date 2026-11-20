@@ -219,10 +219,28 @@
     </div>
   </div>
 
+  <!-- Modo Anti-Silêncio (Puxar Assunto) -->
+  <div class="card">
+    <div class="card-title">
+      <span>Anti-Silêncio (Puxar Assunto)</span>
+      <span id="badgeAntiSilencio" style="font-size:0.8rem; font-weight:600; color:var(--accent-light);">ATIVO</span>
+    </div>
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+      <div style="font-size:0.88rem; color:var(--text-muted);">
+        Status: <span id="txtTempoSilencio" style="color:#fff; font-weight:600;">Sem eventos há 0s (limite: 75s)</span>
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button class="secondary" id="btnToggleSilencio" onclick="alternarAntiSilencio()">Pausar</button>
+        <button onclick="forcarAntiSilencio()">Puxar Assunto Agora</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Simulador de Eventos / Testes -->
   <div class="card">
-    <div class="card-title">Simulador de Eventos (Testes)</div>
+    <div class="card-title">Simulador de Eventos & Efeitos</div>
     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <button style="background:var(--gold); color:#000;" onclick="dispararConfetesPainel()">🎉 Disparar Confetes</button>
       <button class="secondary" onclick="simular('presente', 'Rosa', 5, 5)">🎁 +5 Rosas</button>
       <button class="secondary" onclick="simular('presente', 'Leão', 1, 500)">🦁 +1 Leão (Grande)</button>
       <button class="secondary" onclick="simular('follow')">⭐ +1 Novo Seguidor</button>
@@ -288,6 +306,25 @@ async function atualizarEstado() {
 
     // Metas
     renderizarMetas(data.metas || {});
+
+    // Anti-Silêncio
+    if (data.anti_silencio) {
+      const as = data.anti_silencio;
+      const badge = document.getElementById("badgeAntiSilencio");
+      const txt = document.getElementById("txtTempoSilencio");
+      const btn = document.getElementById("btnToggleSilencio");
+      if (as.ativo) {
+        badge.textContent = "ATIVO";
+        badge.style.color = "var(--accent-light)";
+        btn.textContent = "Pausar";
+        txt.textContent = `Sem eventos há ${as.segundos_sem_evento}s (dispara em ${Math.max(0, as.tempo - as.segundos_sem_evento)}s)`;
+      } else {
+        badge.textContent = "PAUSADO";
+        badge.style.color = "var(--danger)";
+        btn.textContent = "Ativar";
+        txt.textContent = "Anti-silêncio está pausado no momento";
+      }
+    }
 
     // Feed de eventos
     renderizarFeed(data.historico || []);
@@ -443,6 +480,49 @@ async function simular(tipo, item, qtd, diamantes) {
     toast(`Evento de ${tipo} simulado!`);
     atualizarEstado();
   } catch (e) {}
+}
+
+async function dispararConfetesPainel() {
+  try {
+    const res = await fetch("/api/confetes", { method: "POST" });
+    const d = await res.json();
+    if (d.ok) toast("🎉 Confetes disparados na tela!");
+  } catch (e) {
+    toast("Erro ao disparar confetes");
+  }
+}
+
+async function alternarAntiSilencio() {
+  if (!estadoAtual?.anti_silencio) return;
+  const novoAtivo = !estadoAtual.anti_silencio.ativo;
+  try {
+    const res = await fetch("/api/anti_silencio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ativo: novoAtivo })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      toast(novoAtivo ? "Anti-silêncio ativado!" : "Anti-silêncio pausado!");
+      atualizarEstado();
+    }
+  } catch (e) {
+    toast("Erro ao alterar anti-silêncio");
+  }
+}
+
+async function forcarAntiSilencio() {
+  try {
+    const res = await fetch("/api/anti_silencio", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ forcar: true })
+    });
+    const d = await res.json();
+    if (d.ok) toast("Personagem puxando assunto com o chat!");
+  } catch (e) {
+    toast("Erro ao forçar fala");
+  }
 }
 
 // Enter no input de fala

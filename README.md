@@ -22,6 +22,8 @@ Projeto do tutorial de **Santi Studio** no YouTube ([@SantiStudioOficial](https:
 | **Voz** | Fala com voz natural brasileira e sincroniza o movimento da boca com o áudio. |
 | **Legendas** | Digitadas em tempo real no ritmo da fala, com painel indicando quem está sendo respondido. |
 | **Metas** | Metas de moedas e de seguidores que a personagem comemora quando são batidas. |
+| **Confetes** | Chuva de confetes coloridos na tela ao bater metas ou receber presentes grandes. |
+| **Anti-Silêncio** | Puxa assunto automaticamente com o chat para a live nunca ficar em vácuo. |
 | **Filtros** | Bloqueio de palavrões e nomes ofensivos, com regras adequadas para um público amplo. |
 | **Backup** | Se uma IA falhar ou atingir o limite, tenta a próxima; se todas falharem, usa frases de backup. A live nunca fica em silêncio. |
 

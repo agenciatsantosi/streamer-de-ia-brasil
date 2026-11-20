@@ -8,6 +8,10 @@ progresso_seguidores.txt
 progreso_meta.txt
 progreso_seguidores.txt
 
+# Configurações com chaves pessoais (evita vazamento de API keys)
+configuracao.txt
+configuracion.txt
+
 # Vídeos e áudio adicionados pelo usuário
 repouso.mp4
 falando.mp4
