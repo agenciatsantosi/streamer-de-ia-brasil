@@ -1052,6 +1052,65 @@ async def api_limpar_logs(request):
     return web.json_response({"ok": True})
 
 
+
+# Uploads são salvos localmente pelo servidor; o usuário não precisa copiar arquivos.
+LIMITE_VIDEO_BYTES = 150 * 1024 * 1024
+TIPOS_VIDEO = {"repouso": "repouso.mp4", "falando": "falando.mp4"}
+
+async def api_videos(request):
+    return web.json_response({"videos": {
+        tipo: {"existe": (CARPETA / nome).is_file(),
+               "tamanho": (CARPETA / nome).stat().st_size if (CARPETA / nome).is_file() else 0}
+        for tipo, nome in TIPOS_VIDEO.items()
+    }})
+
+async def api_upload_video(request):
+    import os
+    import tempfile
+    tipo = request.match_info.get("tipo")
+    if tipo not in TIPOS_VIDEO:
+        return web.json_response({"ok": False, "erro": "Tipo de vídeo inválido"}, status=400)
+    if not request.content_type.startswith("multipart/"):
+        return web.json_response({"ok": False, "erro": "Envie um arquivo multipart"}, status=415)
+    destino = CARPETA / TIPOS_VIDEO[tipo]
+    temporario = None
+    try:
+        leitor = await request.multipart()
+        parte = await leitor.next()
+        if parte is None or parte.name != "video" or not (parte.filename or "").lower().endswith(".mp4"):
+            return web.json_response({"ok": False, "erro": "Selecione um arquivo .mp4"}, status=400)
+        fd, temporario = tempfile.mkstemp(prefix=".video-", suffix=".tmp", dir=str(CARPETA))
+        tamanho = 0
+        with os.fdopen(fd, "wb") as saida:
+            while True:
+                bloco = await parte.read_chunk(size=256 * 1024)
+                if not bloco:
+                    break
+                tamanho += len(bloco)
+                if tamanho > LIMITE_VIDEO_BYTES:
+                    return web.json_response({"ok": False, "erro": "Limite de 150 MB excedido"}, status=413)
+                saida.write(bloco)
+        if tamanho < 12:
+            return web.json_response({"ok": False, "erro": "Arquivo vazio ou inválido"}, status=400)
+        with open(temporario, "rb") as entrada:
+            cabecalho = entrada.read(12)
+        if cabecalho[4:8] != b"ftyp":
+            return web.json_response({"ok": False, "erro": "O arquivo não parece ser MP4"}, status=415)
+        os.replace(temporario, destino)
+        temporario = None
+        enviar_a_visores({"tipo": "videos_atualizados", "video": tipo, "versao": int(time.time() * 1000)})
+        log(f"Vídeo {tipo} atualizado pelo painel ({tamanho} bytes)")
+        return web.json_response({"ok": True, "tipo": tipo, "tamanho": tamanho})
+    except Exception as e:
+        aviso(f"Falha no upload de vídeo: {type(e).__name__}")
+        return web.json_response({"ok": False, "erro": "Falha ao salvar vídeo"}, status=500)
+    finally:
+        if temporario:
+            try:
+                os.unlink(temporario)
+            except OSError:
+                pass
+
 async def archivo(request):
     nombre = request.match_info.get("archivo") or "visor.html"
     ruta = (CARPETA / nombre).resolve()
@@ -1226,6 +1285,8 @@ async def principal():
     app.router.add_get("/painel", rota_painel)
     app.router.add_get("/admin", rota_painel)
     app.router.add_get("/api/estado", api_estado)
+    app.router.add_get("/api/videos", api_videos)
+    app.router.add_post("/api/videos/{tipo}", api_upload_video)
     app.router.add_post("/api/falar", api_falar)
     app.router.add_post("/api/meta", api_meta)
     app.router.add_post("/api/config", api_config)
