@@ -258,6 +258,31 @@
     </div>
   </div>
 
+
+  <!-- Vídeos do Personagem -->
+  <div class="card">
+    <div class="card-title">Vídeos do Personagem</div>
+    <p style="color:var(--text-muted);font-size:.9rem;margin-bottom:16px">Envie vídeos MP4 diretamente pelo painel. O sistema salva e aplica os arquivos automaticamente, sem copiar nada para a pasta manualmente. Limite: 150 MB por vídeo.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:16px">
+      <div style="border:1px solid var(--border);border-radius:12px;padding:14px">
+        <strong>Repouso</strong>
+        <p id="statusVideoRepouso" style="color:var(--text-muted);font-size:.82rem;margin:8px 0">Verificando...</p>
+        <video id="previewRepouso" controls muted loop playsinline style="width:100%;max-height:240px;background:#000;border-radius:8px"></video>
+        <input id="arquivoRepouso" type="file" accept="video/mp4,.mp4" style="display:block;max-width:100%;margin:12px 0">
+        <progress id="progressoRepouso" value="0" max="100" style="width:100%;display:none"></progress>
+        <button id="botaoRepouso" onclick="enviarVideo('repouso')">Salvar vídeo de repouso</button>
+      </div>
+      <div style="border:1px solid var(--border);border-radius:12px;padding:14px">
+        <strong>Falando</strong>
+        <p id="statusVideoFalando" style="color:var(--text-muted);font-size:.82rem;margin:8px 0">Verificando...</p>
+        <video id="previewFalando" controls muted loop playsinline style="width:100%;max-height:240px;background:#000;border-radius:8px"></video>
+        <input id="arquivoFalando" type="file" accept="video/mp4,.mp4" style="display:block;max-width:100%;margin:12px 0">
+        <progress id="progressoFalando" value="0" max="100" style="width:100%;display:none"></progress>
+        <button id="botaoFalando" onclick="enviarVideo('falando')">Salvar vídeo falando</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Controle de Áudio & Voz -->
   <div class="card">
     <div class="card-title">Música & Voz</div>
@@ -758,6 +783,75 @@ async function forcarAntiSilencio() {
     toast("Erro ao forçar fala");
   }
 }
+
+
+const nomeVideo = tipo => tipo === "repouso" ? "Repouso" : "Falando";
+async function atualizarVideos() {
+  try {
+    const res = await fetch("/api/videos");
+    if (!res.ok) throw new Error("Servidor indisponível");
+    const data = await res.json();
+    for (const tipo of ["repouso", "falando"]) {
+      const nome = nomeVideo(tipo);
+      const info = data.videos?.[tipo];
+      document.getElementById("statusVideo" + nome).textContent =
+        info?.existe ? "Salvo — " + (info.tamanho / 1048576).toFixed(1) + " MB" : "Nenhum vídeo enviado";
+      const video = document.getElementById("preview" + nome);
+      if (info?.existe) {
+        video.src = "/" + tipo + ".mp4?v=" + Date.now();
+      } else {
+        video.removeAttribute("src");
+        video.load();
+      }
+    }
+  } catch (e) {
+    for (const tipo of ["Repouso", "Falando"]) {
+      document.getElementById("statusVideo" + tipo).textContent = "Não foi possível consultar os vídeos";
+    }
+  }
+}
+function enviarVideo(tipo) {
+  const nome = nomeVideo(tipo);
+  const arquivo = document.getElementById("arquivo" + nome).files[0];
+  if (!arquivo) return toast("Selecione um vídeo MP4.");
+  if (!arquivo.name.toLowerCase().endsWith(".mp4") || arquivo.size > 150 * 1048576) {
+    return toast("Use um MP4 de até 150 MB.");
+  }
+  const botao = document.getElementById("botao" + nome);
+  const progresso = document.getElementById("progresso" + nome);
+  const status = document.getElementById("statusVideo" + nome);
+  const dados = new FormData();
+  dados.append("video", arquivo);
+  const xhr = new XMLHttpRequest();
+  botao.disabled = true;
+  progresso.style.display = "block";
+  progresso.value = 0;
+  status.textContent = "Enviando...";
+  xhr.upload.onprogress = e => {
+    if (e.lengthComputable) progresso.value = Math.round(e.loaded / e.total * 100);
+  };
+  xhr.onload = async () => {
+    botao.disabled = false;
+    let resposta = {};
+    try { resposta = JSON.parse(xhr.responseText); } catch {}
+    if (xhr.status === 200 && resposta.ok) {
+      document.getElementById("arquivo" + nome).value = "";
+      toast("Vídeo salvo e aplicado!");
+      await atualizarVideos();
+    } else {
+      status.textContent = resposta.erro || "Erro ao enviar vídeo";
+      toast(status.textContent);
+    }
+  };
+  xhr.onerror = () => {
+    botao.disabled = false;
+    status.textContent = "Falha na conexão durante o upload";
+    toast(status.textContent);
+  };
+  xhr.open("POST", "/api/videos/" + tipo);
+  xhr.send(dados);
+}
+atualizarVideos();
 
 // Enter no input de fala
 document.getElementById("inputFala").addEventListener("keydown", e => {
