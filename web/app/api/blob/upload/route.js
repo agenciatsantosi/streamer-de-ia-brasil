@@ -26,7 +26,7 @@ export async function POST(request){
    avatars[index][kinds[kind]]=blob.url;
    avatars[index].updated_at=new Date().toISOString();
    await saveAvatars(avatars);
-   if(old && old!==blob.url)await del(old).catch(()=>{});
+   if(old && old!==blob.url && !avatars.some(a=>[a.cover_url,a.rest_video_url,a.talk_video_url].includes(old)))await del(old).catch(()=>{});
   }
  });
  return Response.json(result);
