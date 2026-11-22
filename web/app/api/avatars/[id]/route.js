@@ -21,6 +21,6 @@ export async function DELETE(request,{params}){
  if(idx<0)return Response.json({error:'Não encontrado'},{status:404});
  const [removed]=avatars.splice(idx,1);
  await saveAvatars(avatars);
- for(const url of [removed.cover_url,removed.rest_video_url,removed.talk_video_url])if(url)await del(url).catch(()=>{});
+ for(const url of [removed.cover_url,removed.rest_video_url,removed.talk_video_url])if(url && !avatars.some(a=>[a.cover_url,a.rest_video_url,a.talk_video_url].includes(url)))await del(url).catch(()=>{});
  return Response.json({ok:true});
 }
