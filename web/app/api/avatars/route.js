@@ -1,15 +1,17 @@
-import {authorized,badAuth,sql,validAvatar} from '../../../lib/server';
+import {authorized,badAuth,validAvatar} from '../../../lib/server';
+import {getAvatars,saveAvatars} from '../../../lib/avatars';
 export const runtime='nodejs';
 export async function GET(){
  if(!await authorized())return badAuth();
- const db=sql();const avatars=await db`SELECT id,name,personality,voice,active,rest_video_url,talk_video_url,cover_url,created_at FROM avatars ORDER BY created_at DESC`;
- return Response.json({avatars});
+ const avatars=await getAvatars();
+ return Response.json({avatars:avatars.sort((a,b)=>b.created_at.localeCompare(a.created_at))});
 }
 export async function POST(request){
  if(!await authorized())return badAuth();
- const body=await request.json().catch(()=>({})),data=validAvatar(body);
+ const data=validAvatar(await request.json().catch(()=>({})));
  if(!data)return Response.json({error:'Dados inválidos'},{status:400});
- const db=sql();
- const [avatar]=await db`INSERT INTO avatars(name,personality,voice,active) VALUES(${data.name},${data.personality},${data.voice},false) RETURNING *`;
+ const now=new Date().toISOString();
+ const avatar={id:crypto.randomUUID(),...data,active:false,cover_url:null,rest_video_url:null,talk_video_url:null,created_at:now,updated_at:now};
+ const avatars=await getAvatars();avatars.push(avatar);await saveAvatars(avatars);
  return Response.json({avatar},{status:201});
 }
