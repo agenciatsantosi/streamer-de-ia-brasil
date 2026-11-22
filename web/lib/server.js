@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 function signature(value) {return createHmac('sha256',process.env.SESSION_SECRET || '').update(value).digest('hex')}
 export async function authorized() {
  const secret = process.env.SESSION_SECRET;
- if (!secret || secret.length < 32 || !process.env.ADMIN_PASSWORD) return false;
+ if (!secret || secret.length < 32) return false;
  const cookie = (await cookies()).get('streamer_session')?.value || '';
  const [expires,mac] = cookie.split('.');
  if (!expires || !mac || !/^\d+$/.test(expires) || Number(expires)<Date.now()) return false;
