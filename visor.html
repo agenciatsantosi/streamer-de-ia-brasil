@@ -429,6 +429,8 @@ const URL_SCRIPT = location.protocol.startsWith("http")
   ? `ws://${location.host}/ws`
   : `ws://localhost:${PUERTO_SCRIPT}/ws`;
 
+function mensagemVideoUrl(tipo, versao) { return `/${tipo}.mp4?v=${versao || Date.now()}`; }
+
 function conectarScript() {
   try { socket = new WebSocket(URL_SCRIPT); }
   catch { return setTimeout(conectarScript, 3000); }
@@ -463,6 +465,23 @@ function conectarScript() {
       } else {
         musica.pause();
       }
+    }
+    if (mensaje.tipo === "videos_atualizados") {
+      const elem = mensaje.video === "repouso" ? reposo : hablando;
+      const anterior = elem.currentTime || 0;
+      const estavaTocando = !elem.paused;
+      elem.src = mensagemVideoUrl(mensaje.video, mensaje.versao);
+      elem.load();
+      elem.addEventListener("loadedmetadata", () => {
+        if (Number.isFinite(elem.duration) && anterior < elem.duration) elem.currentTime = anterior;
+        if (estavaTocando) elem.play().catch(() => {});
+      }, { once: true });
+      if (mensaje.video === "falando") {
+        margenesDetectados = false;
+        detectando = false;
+        setTimeout(() => detectarMargenes(), 1200);
+      }
+      mostrarEstado("Vídeo de " + mensaje.video + " atualizado pelo painel.");
     }
     if (mensaje.tipo === "confetes") dispararConfetes(mensaje.quantidade || 90);
     if (mensaje.tipo === "top_doador") {
