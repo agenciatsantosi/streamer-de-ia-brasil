@@ -9,6 +9,7 @@ export async function PATCH(request,{params}){
  if(!data)return Response.json({error:'Dados inválidos'},{status:400});
  const avatars=await getAvatars(),idx=avatars.findIndex(a=>a.id===id);
  if(idx<0)return Response.json({error:'Não encontrado'},{status:404});
+ if(data.active) for(const item of avatars)item.active=false;
  const avatar={...avatars[idx],...data,updated_at:new Date().toISOString()};
  avatars[idx]=avatar;await saveAvatars(avatars);
  return Response.json({avatar});
