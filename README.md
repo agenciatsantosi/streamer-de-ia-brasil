@@ -27,6 +27,7 @@ Projeto do tutorial de **Santi Studio** no YouTube ([@SantiStudioOficial](https:
 | **Confetes** | Chuva de confetes coloridos na tela ao bater metas ou receber presentes grandes. |
 | **Anti-Silêncio** | Puxa assunto automaticamente com o chat para a live nunca ficar em vácuo. |
 | **Painel Web** | Gerencie tudo pelo navegador ou celular (`/painel`) com botões de fala rápida, sliders de som, metas e ranking. |
+| **Console de Logs** | Acompanhe todos os eventos, avisos e logs do terminal em tempo real diretamente pelo painel web. |
 | **Filtros** | Bloqueio de palavrões e nomes ofensivos, com regras adequadas para um público amplo. |
 | **Backup** | Se uma IA falhar ou atingir o limite, tenta a próxima; se todas falharem, usa frases de backup. A live nunca fica em silêncio. |
 
