@@ -1,10 +1,5 @@
-import { neon } from '@neondatabase/serverless';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { cookies } from 'next/headers';
-export function sql() {
- if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL ausente');
- return neon(process.env.DATABASE_URL);
-}
 function signature(value) {return createHmac('sha256',process.env.SESSION_SECRET || '').update(value).digest('hex')}
 export async function authorized() {
  const secret = process.env.SESSION_SECRET;
