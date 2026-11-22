@@ -4,8 +4,9 @@ import {authorized,badAuth,sql} from '../../../../lib/server';
 export const runtime='nodejs';
 const kinds={cover:'cover_url',rest:'rest_video_url',talk:'talk_video_url'};
 export async function POST(request){
- if(!await authorized())return badAuth();
  const body=await request.json().catch(()=>null);
+ // O callback assinado do Blob não traz cookie; apenas a emissão do token exige sessão.
+ if(body?.type==='blob.generate-client-token' && !await authorized())return badAuth();
  if(!body)return Response.json({error:'Requisição inválida'},{status:400});
  try{
  const result=await handleUpload({
