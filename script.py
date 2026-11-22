@@ -35,6 +35,7 @@ CARPETA = Path(__file__).resolve().parent
 PUERTO = 8765
 TIKFINITY_URL = "ws://127.0.0.1:21213/"
 ARCHIVOS_PERMITIDOS = {".html", ".mp4", ".webm", ".mp3", ".wav", ".png", ".jpg", ".jpeg", ".webp"}
+VERSAO_SISTEMA = "v1.2.0-BR"
 
 
 def obter_ip_local():
@@ -920,6 +921,7 @@ async def api_estado(request):
         "metas": metas_dict,
         "historico": historico_eventos,
         "logs": buffer_logs[:50],
+        "versao": VERSAO_SISTEMA,
         "ultimas_falas": ultimas_respuestas[-5:]
     })
 
@@ -1246,7 +1248,7 @@ async def principal():
 
     ip_local = obter_ip_local()
     print("=" * 65)
-    print(" Streamer de IA pronto")
+    print(f" Streamer de IA pronto — {VERSAO_SISTEMA}")
     print(f" Visualizador para testar:    http://localhost:{PUERTO}")
     print(f" Visualizador para a live:    http://127.0.0.1:{PUERTO}/visor.html?live=1")
     print(f" Painel de Controle (Web):    http://localhost:{PUERTO}/painel")

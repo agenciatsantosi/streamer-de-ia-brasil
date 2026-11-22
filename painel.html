@@ -202,8 +202,10 @@
       <p>Controle da transmissão em tempo real</p>
     </div>
     <div class="status-badges">
+      <span class="badge" id="badgeVersao" style="color:var(--accent-light);">v1.2.0-BR</span>
       <span class="badge" id="badgeVisor"><span class="dot" id="dotVisor"></span> <span id="txtVisor">Visualizador</span></span>
       <span class="badge" id="badgeModo">MODO: <strong id="txtModo">-</strong></span>
+      <button class="secondary" style="padding:6px 12px; font-size:0.75rem;" onclick="copiarLinkOBS()">📋 Copiar Link OBS</button>
     </div>
   </header>
 
@@ -410,6 +412,7 @@ async function atualizarEstado() {
       txtVisor.textContent = "Visor Desconectado";
     }
     document.getElementById("txtModo").textContent = (data.modo || "teste").toUpperCase();
+    if (data.versao) document.getElementById("badgeVersao").textContent = data.versao;
 
     // Fila
     document.getElementById("numVip").textContent = data.fila?.regalos_vip || 0;
@@ -757,6 +760,15 @@ async function forcarAntiSilencio() {
   } catch (e) {
     toast("Erro ao forçar fala");
   }
+}
+
+function copiarLinkOBS() {
+  const url = `${window.location.protocol}//${window.location.hostname}:${window.location.port || '8765'}/visor.html?live=1`;
+  navigator.clipboard.writeText(url).then(() => {
+    toast("Link do OBS copiado com sucesso!");
+  }).catch(() => {
+    prompt("Copie o link abaixo para o OBS:", url);
+  });
 }
 
 // Enter no input de fala
